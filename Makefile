@@ -1,6 +1,7 @@
 .PHONY: clean run test
 
 SHELL := /bin/bash
+PYTHON_VENV := .venv/bin/python
 
 clean:
 	rm -rf __pycache__
@@ -9,8 +10,8 @@ clean:
 	rm -rf wiki
 	rm -rf .venv
 
-run: 
-	python3 mini_watson.py wiki
+run: $(PYTHON_VENV)
+	$(PYTHON_VENV) mini_watson.py wiki
 
-test: 
-	pytest
+test: $(PYTHON_VENV)
+	 $(PYTHON_VENV) -m pytest

@@ -18,11 +18,7 @@ This file will setup a Python virtual environment, as well as the document colle
 
 # Run
 
-Once you are successfully installed, use
-```bash
-source .venv/bin/activate
-```
-then run the project via `Makefile` commands 
+Once you are successfully installed, run the project via `Makefile` commands 
 ```bash
 make run   # Type queries by hand
 ```
