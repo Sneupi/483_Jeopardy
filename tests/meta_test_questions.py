@@ -3,7 +3,7 @@
 with open("questions.txt") as q_file, open("test_questions.py", "w") as py_file:
     
     py_file.write("import mini_watson\n")
-    py_file.write("ir = mini_watson.Watson(\"wiki\")\n")
+    py_file.write("ir = mini_watson.Watson(\"wiki\", \"index\")\n")
     
     q_content = q_file.read().split('\n\n')
     q_list = [q.strip() for q in q_content if q.strip()]

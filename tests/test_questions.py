@@ -1,5 +1,5 @@
 import mini_watson
-ir = mini_watson.Watson("wiki")
+ir = mini_watson.Watson("wiki", "index")
 
 def test_question_1():
 	response = ir.guess("The dominant paper in our nation's capital, it's among the top 10 U.S. papers in circulation")

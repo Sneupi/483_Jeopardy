@@ -11,7 +11,7 @@ clean:
 	rm -rf .venv
 
 run: $(PYTHON_VENV)
-	$(PYTHON_VENV) mini_watson.py wiki
+	$(PYTHON_VENV) mini_watson.py wiki index
 
 test: $(PYTHON_VENV)
 	 $(PYTHON_VENV) -m pytest

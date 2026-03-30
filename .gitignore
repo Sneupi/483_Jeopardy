@@ -1,7 +1,9 @@
 __pycache__
 .venv
-index
+/index
 wiki-subset-20140602.tar.gz
 enwiki*
 ._enwiki*
 .pytest_cache
+/wiki
+/dev
