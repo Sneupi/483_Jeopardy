@@ -24,12 +24,16 @@ class Watson:
         
         # Load Whoosh
         os.makedirs(index, exist_ok=True)
-        stem_ana = analysis.StemmingAnalyzer() # stem all terms (docs & queries)
+        # stem ir terms (docs & queries),
+        # use unbound cache for index speed
+        stem_ana = analysis.StemmingAnalyzer(cachesize=-1) 
         schema = Schema(title=TEXT(stored=True, analyzer=stem_ana), 
                         body=TEXT(analyzer=stem_ana),
                         path=ID(stored=True))
         self.ix = create_in(index, schema)
-        writer = self.ix.writer()
+        # Use whole gigabyte of RAM (across 
+        # 4 processes) to speed up indexing 
+        writer = self.ix.writer(procs=4, multisegment=True, limitmb=256)
         
         # Add documents, partitioned by txt file, in collection dir
         for file in os.listdir(corpus):

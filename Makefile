@@ -16,8 +16,5 @@ run: $(PYTHON_VENV)
 test: $(PYTHON_VENV)
 	 $(PYTHON_VENV) -m pytest
 
-# small test collection
-dev:
-	clear
-	rm -rf dev/index
+dev: $(PYTHON_VENV)
 	$(PYTHON_VENV) mini_watson.py dev/wiki dev/index
