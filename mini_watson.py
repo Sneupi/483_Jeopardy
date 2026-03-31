@@ -43,16 +43,19 @@ class Watson:
                 
                 # Add docs in txt
                 path = os.path.join(corpus, file)
-                for title, body in self.parse_document(path):
-                    print(title) # DEBUGGING
-                    # print("\n\nADDING\n" + title + "\n\t" + body) # DEBUGGING
-                    writer.add_document(title=title, body=body, path=path)
+                print('* Indexing:', path)
+                for document in self.parse_wiki_dump(path):
+                    writer.add_document(title=document['title'], 
+                                        path=document['path'], 
+                                        body=document['body'])
         
         # Commit docs to whoosh index
+        print('Comitting documents to index...',end='')
         writer.commit()
+        print('done!')
 
-    def parse_document(self, path):
-        '''Yields title, body pairs from text file'''
+    def parse_wiki_dump(self, path):
+        '''Yields documents from text file as dicts'''
         
         # conservative matching, specific exclusion 
         # of matching File and Image embeds
@@ -70,7 +73,7 @@ class Watson:
                     
                     # spit out last entry (if avail)
                     if title is not None:
-                        yield title, self.filter_mediawiki(body)
+                        yield {'title':title, 'path':path, 'body':self.filter_mediawiki(body)}
                         
                     # track new entry
                     title = line[2:-2]
@@ -82,7 +85,7 @@ class Watson:
                     
             # EOF, yield last entry
             if title is not None:
-                yield title, self.filter_mediawiki(body)
+                yield {'title':title, 'path':path, 'body':self.filter_mediawiki(body)}
     
     def filter_mediawiki(self, text):
         '''Filter most common MediaWiki syntax from text'''
