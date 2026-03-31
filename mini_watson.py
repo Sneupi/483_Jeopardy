@@ -3,7 +3,7 @@ import re
 import argparse
 from whoosh.index import create_in, open_dir, exists_in
 from whoosh.fields import *
-from whoosh.qparser import QueryParser
+from whoosh import qparser, analysis, query
 
 class Watson:
     '''Mini-implementation of IBM Watson, 
@@ -24,7 +24,10 @@ class Watson:
         
         # Load Whoosh
         os.makedirs(index, exist_ok=True)
-        schema = Schema(title=TEXT(stored=True), body=TEXT)
+        stem_ana = analysis.StemmingAnalyzer() # stem all terms (docs & queries)
+        schema = Schema(title=TEXT(stored=True, analyzer=stem_ana), 
+                        body=TEXT(analyzer=stem_ana),
+                        path=ID(stored=True))
         self.ix = create_in(index, schema)
         writer = self.ix.writer()
         
@@ -37,8 +40,9 @@ class Watson:
                 # Add docs in txt
                 path = os.path.join(corpus, file)
                 for title, body in self.parse_document(path):
+                    print(title) # DEBUGGING
                     # print("\n\nADDING\n" + title + "\n\t" + body) # DEBUGGING
-                    writer.add_document(title=title, body=body)
+                    writer.add_document(title=title, body=body, path=path)
         
         # Commit docs to whoosh index
         writer.commit()
@@ -97,26 +101,45 @@ class Watson:
         
         return text
         
-    def run_query(self, query):
-        '''Returns list of guesses based on hint'''
+    def run_query(self, user_query):
+        '''Returns list of guesses (title, path) based on hint'''
         with self.ix.searcher() as searcher:
-            whoosh_query = QueryParser("body", self.ix.schema).parse(query)
-            results = [result['title'] for result in searcher.search(whoosh_query)]
-        return results
+
+            # check query against all fields, 
+            # using schema (stems query terms),
+            # matching one or more terms (OrGroup),
+            # where all term variations are explored
+            
+            parser = qparser.MultifieldParser(fieldnames=["title", "body"], 
+                                              schema=self.ix.schema, 
+                                              group=qparser.OrGroup.factory(0.9),
+                                              termclass=query.Variations)
+            
+            whoosh_query = parser.parse(user_query)
+            
+            return [(res['title'], res['path']) for res in searcher.search(whoosh_query)]
     
     def guess(self, query):
         '''Returns best guess based on hint'''
-        return self.run_query(query)[0]
+        return self.run_query(query)[0][0]
         
 def main(corpus, index):
     ir = Watson(corpus, index)
 
     while True:
+        
+        # Process query
         query = input('Query: ').strip()
         if query == 'exit':
             break
         results = ir.run_query(query)
-        print(results)
+        
+        # Print results
+        for i, (title, path) in enumerate(results):
+            print(i+1)
+            print('  ' + title)
+            print('  ' + path)
+        print()
 
 
 if __name__ == '__main__':
