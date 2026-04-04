@@ -12,7 +12,7 @@ with open("questions.txt") as q_file, open("test_questions.py", "w") as py_file:
         category, question, answer = q.split('\n')
         
         py_file.write(f"\ndef test_question_{i+1}():\n")
-        py_file.write(f"\tresponse = ir.guess(\"{question.replace('"', '\\"')}\")\n")
+        py_file.write(f"\tresponse = ir.guess(\"{category.replace('"', '\\"')}, {question.replace('"', '\\"')}\")\n")
         py_file.write(f"\tassert response == \"{answer}\"\n")
     
     
