@@ -4,7 +4,7 @@ import mwparserfromhell
 def _clean_body(body):
         '''Crude cleaning of body from wiki syntax'''
         mediawiki_cleaned = mwparserfromhell.parse(body).strip_code(normalize=True, collapse=True) 
-        return re.sub(r'(\[tpl\].*?\[/tpl\]|\[/?tpl\]|[^\s\n]*\|[^\s\n]*)|\[/?ref\]|}}', '', mediawiki_cleaned, flags=re.DOTALL)
+        return re.sub(r'(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|]|\[tpl\].*?\[/tpl\]|\[/?tpl\]|[\[<]/?ref[>\]]|}}|(?<=\n)\|[^\n]*?\n)', '', mediawiki_cleaned, flags=re.DOTALL|re.IGNORECASE)
         
 def iterate_entries(path):
     '''Iterate Wiki entries contained in singular textfile'''
