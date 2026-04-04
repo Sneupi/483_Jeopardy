@@ -73,11 +73,11 @@ class Watson:
             whoosh_query = parser.parse(user_query)
             
             return [{'title':res['title'], 'path':res['path']} for res in searcher.search(whoosh_query)]
-    
-    def guess(self, query):
-        '''Returns best guess based on hint'''
-        return self.run_query(query)[0]['title']
-        
+
+    def pretty(response):
+        '''Pretty-format results'''
+        return '\n'.join(f"{str(i+1):<2} {res['title']}\n   {res['path']}" for i,res in enumerate(response))
+
 def main(corpus, index):
     ir = Watson(corpus, index)
 
@@ -90,11 +90,7 @@ def main(corpus, index):
         results = ir.run_query(query)
         
         # Print results
-        for i, res in enumerate(results):
-            print(i+1)
-            print('  ' + res['title'])
-            print('  ' + res['path'])
-        print()
+        print(Watson.pretty(results))
 
 
 if __name__ == '__main__':
