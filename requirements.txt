@@ -1,6 +1,7 @@
 click==8.3.1
 iniconfig==2.3.0
 joblib==1.5.3
+mwparserfromhell==0.7.2
 nltk==3.9.3
 packaging==26.0
 pluggy==1.6.0

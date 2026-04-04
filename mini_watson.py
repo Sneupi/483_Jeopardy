@@ -4,6 +4,7 @@ import argparse
 from whoosh.index import create_in, open_dir, exists_in
 from whoosh.fields import *
 from whoosh import qparser, analysis, query
+import wiki_parser
 
 class Watson:
     '''Mini-implementation of IBM Watson, 
@@ -27,7 +28,7 @@ class Watson:
         # stem ir terms (docs & queries),
         # use unbound cache for index speed
         stem_ana = analysis.StemmingAnalyzer(cachesize=-1) 
-        schema = Schema(title=TEXT(stored=True, analyzer=stem_ana), 
+        schema = Schema(title=ID(stored=True), 
                         body=TEXT(analyzer=stem_ana),
                         path=ID(stored=True))
         self.ix = create_in(index, schema)
@@ -44,9 +45,9 @@ class Watson:
                 # Add docs in txt
                 path = os.path.join(corpus, file)
                 print('* Indexing:', path)
-                for document in self.parse_wiki_dump(path):
+                for document in wiki_parser.iterate_entries(path):
                     writer.add_document(title=document['title'], 
-                                        path=document['path'], 
+                                        path=path, 
                                         body=document['body'])
         
         # Commit docs to whoosh index
@@ -54,59 +55,6 @@ class Watson:
         writer.commit()
         print('done!')
 
-    def parse_wiki_dump(self, path):
-        '''Yields documents from text file as dicts'''
-        
-        # conservative matching, specific exclusion 
-        # of matching File and Image embeds
-        title_pattern = re.compile(r"^\[\[(?!(?:File:|Image:)).*\]\]$")
-        
-        title = None
-        body = []
-            
-        with open(path) as f:
-            for line in f:
-                line = line.strip()
-                
-                # if title found
-                if title_pattern.match(line):
-                    
-                    # spit out last entry (if avail)
-                    if title is not None:
-                        yield {'title':title, 'path':path, 'body':self.filter_mediawiki(body)}
-                        
-                    # track new entry
-                    title = line[2:-2]
-                    body = []
-                
-                # else add to body under title
-                elif title and line:
-                    body.append(line)
-                    
-            # EOF, yield last entry
-            if title is not None:
-                yield {'title':title, 'path':path, 'body':self.filter_mediawiki(body)}
-    
-    def filter_mediawiki(self, text):
-        '''Filter most common MediaWiki syntax from text'''
-        
-        if isinstance(text, list):
-            text = " ".join(t.strip() for t in text)
-        assert isinstance(text, str)
-        
-        # remove table delimiters e.g. [tpl]tag1=thing1|tag2=thing2[/tpl] -> thing1 thing2
-        text = re.sub(r'\[tpl\](.*?)\[\/tpl\]', lambda m: ' '.join((v.split('=')[1] if len(v.split('=')) > 1 else v) for v in m.group(1).split('|')), text, flags=re.DOTALL)
-        
-        # remove all other blocks e.g. [BLOCK]something[/BLOCK] -> something
-        text = re.sub(r'\[.*\](.*?)\[\/.*\]', r' \1 ', text, flags=re.DOTALL)
-
-        # remove embeds e.g. [[EMBED:something]] -> something
-        text = re.sub(r'\[\[(?:.*?):(.*?)\]\]', r' \1 ', text, flags=re.DOTALL)
-
-        # remove header markdown e.g. ==something== -> something
-        text = re.sub(r'=+(.+?)={2,}', r' \1 ', text)
-        
-        return text
         
     def run_query(self, user_query):
         '''Returns list of guesses (title, path) based on hint'''
@@ -117,10 +65,10 @@ class Watson:
             # matching one or more terms (OrGroup),
             # where all term variations are explored
             
-            parser = qparser.MultifieldParser(fieldnames=["title", "body"], 
-                                              schema=self.ix.schema, 
-                                              group=qparser.OrGroup.factory(0.9),
-                                              termclass=query.Variations)
+            parser = qparser.QueryParser("body", 
+                                         self.ix.schema, 
+                                         group=qparser.OrGroup.factory(0.9),
+                                         termclass=query.Variations)
             
             whoosh_query = parser.parse(user_query)
             
