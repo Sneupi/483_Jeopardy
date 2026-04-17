@@ -1,0 +1,12 @@
+bm25s==0.3.3
+iniconfig==2.3.0
+llvmlite==0.47.0
+numba==0.65.0
+numpy==2.4.4
+orjson==3.11.8
+packaging==26.1
+pluggy==1.6.0
+Pygments==2.20.0
+PyStemmer==3.0.0
+pytest==9.0.3
+tqdm==4.67.3

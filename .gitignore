@@ -1,0 +1,4 @@
+.*
+!.gitignore
+wiki-subset-20140602.tar.gz
+__pycache__
