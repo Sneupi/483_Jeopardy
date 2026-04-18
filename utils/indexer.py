@@ -1,59 +1,17 @@
 # Modification on the following example:
 # https://github.com/xhluca/bm25s/blob/main/examples/index_nq.py
 
-from pathlib import Path
 import bm25s
 import Stemmer
 import os
-import re
-
-def clean_body(body):
-    '''Simple cleaning of MediaWiki syntax'''
-    return re.sub(r'(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|]|\[tpl\].*?\[/tpl\])', '', body, flags=re.DOTALL|re.IGNORECASE)
-    
-def yield_docs(corpus_dir):
-    '''
-    Yields wiki entries contained in text 
-    files contained in corpus directory
-    '''
-    
-    title_pattern = re.compile(r"^\[\[([^\n:]*)\]\]$")
-    title = None
-    body = []
-    
-    # iterate files in dir
-    for f in os.listdir(corpus_dir):                
-        path = os.path.join(corpus_dir, f)
-        
-        # skip all subdirs
-        if os.path.isdir(path): continue
-        print('Reading: ', path, end='\r')
-        
-        # iterate lines in file
-        with open(path) as file:
-            for line in file:
-                
-                # collect to entries, yielding
-                match = title_pattern.match(line)
-                if match:
-                    if title:
-                        yield path, title, ''.join(body)
-                    title = match.group(1)
-                    body = []
-                else:
-                    body.append(line)
-                    
-    # EOF, yield last entry
-    if title:
-        yield path, title, ''.join(body)
-    
+from parser import yield_docs
 
 def create_index(index_dir, dataset_dir):
     os.mkdir(index_dir)
     
     # load entire corpus to mem (OK for our ~1GB raw text corpus)
     corpus_records = [
-        {"id": i, "path": p, "title": t, "text": clean_body(b)} for i, (p, t, b) in enumerate(yield_docs(dataset_dir))
+        {"id": i, "path": p, "title": t, "text": b} for i, (p, t, b) in enumerate(yield_docs(dataset_dir))
     ]
     corpus_lst = [r["title"] + " " + r["text"] for r in corpus_records]
 
