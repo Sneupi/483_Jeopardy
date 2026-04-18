@@ -1,7 +1,6 @@
 import bm25s
 import os
 
-# TODO - Improve retrieval accuracy (BM25 tweaking), have correct guess land in top K more frequent 
 # TODO - Implement reranking for near-misses (in top K, but not #1), maybe via AI
 
 class Retriever:

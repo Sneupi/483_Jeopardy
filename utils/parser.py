@@ -4,7 +4,8 @@ import re
 
 def clean_body(body):
     '''Simple cleaning of MediaWiki syntax'''
-    return re.sub(r'(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|]|\[tpl\].*?\[/tpl\])', '', body, flags=re.DOTALL|re.IGNORECASE)
+    body = re.sub(r'(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|]|\[tpl\].*?\[/tpl\])', '', body, flags=re.DOTALL|re.IGNORECASE)
+    return body
     
 def yield_docs(corpus_dir):
     '''
@@ -31,14 +32,20 @@ def yield_docs(corpus_dir):
                 # collect to entries, yielding
                 match = title_pattern.match(line)
                 if match:
-                    if title:
-                        yield path, title, clean_body(''.join(body))
+                    
+                    # exclude redirects from yielded entries
+                    body = clean_body(''.join(body))
+                    if title and '#redirect' not in body.lower():
+                        yield path, title, body
+                    
+                    # start new entry
                     title = match.group(1)
                     body = []
                 else:
                     body.append(line)
                     
     # EOF, yield last entry
-    if title:
-        yield path, title, clean_body(''.join(body))
+    body = clean_body(''.join(body))
+    if title and '#redirect' not in body.lower():
+        yield path, title, body
     
