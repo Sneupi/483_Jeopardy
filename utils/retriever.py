@@ -17,7 +17,7 @@ class Retriever:
         self.tokenizer = bm25s.tokenization.Tokenizer(splitter=lambda x: x.split())
         self.tokenizer.load_vocab(index_dir)
         
-    def run_query(self, query, k=10):
+    def run_query(self, query, k=100):
         '''
         Wrapper of bm25s BM25.retrieve(). 
         Performs tokenization on input query.

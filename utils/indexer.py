@@ -7,8 +7,10 @@ import Stemmer
 import os
 import re
 
-# TODO - Cleaning the bodies of MediaWiki syntax and other non-natural language before indexing
-
+def clean_body(body):
+    '''Simple cleaning of MediaWiki syntax'''
+    return re.sub(r'(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|]|\[tpl\].*?\[/tpl\])', '', body, flags=re.DOTALL|re.IGNORECASE)
+    
 def yield_docs(corpus_dir):
     '''
     Yields wiki entries contained in text 
@@ -51,7 +53,7 @@ def create_index(index_dir, dataset_dir):
     
     # load entire corpus to mem (OK for our ~1GB raw text corpus)
     corpus_records = [
-        {"id": i, "path": p, "title": t, "text": b} for i, (p, t, b) in enumerate(yield_docs(dataset_dir))
+        {"id": i, "path": p, "title": t, "text": clean_body(b)} for i, (p, t, b) in enumerate(yield_docs(dataset_dir))
     ]
     corpus_lst = [r["title"] + " " + r["text"] for r in corpus_records]
 
