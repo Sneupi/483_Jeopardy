@@ -4,31 +4,31 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import pytest
 import numpy as np
-from utils import retriever
+from utils.reranker import SemanticReranker
 from questions import QA
 
-IR = retriever.Retriever(".bm25s")
+IR = SemanticReranker(".bm25s")
 K = 100
 
 @pytest.mark.parametrize("query, target_titles", QA)
 
-def test_topK(query, target_titles):
-    res, scr = IR.run_query(query, k=K)
+def test_topK_reranker(query, target_titles):
+    res, scr = IR.rerank(query, k=K, rerank_k=50)
     result_titles = [res[0, i]['title'] for i in range(res.shape[1])]
     assert set(target_titles).intersection(result_titles), f"{target_titles} not in top K={K} results"
 
-def test_top_guess(query, target_titles):
-    res, scr = IR.run_query(query, k=K)
+def test_top_guess_reranker(query, target_titles):
+    res, scr = IR.rerank(query, k=K, rerank_k=50)
     result_titles = [res[0, i]['title'] for i in range(res.shape[1])]
     assert result_titles[0] in target_titles
 
-def test_MRR():
+def test_MRR_reranker():
     
     scores_mrr = []
     
     for query, target_titles in QA:
         
-        res, scr = IR.run_query(query, k=K)
+        res, scr = IR.rerank(query, k=K, rerank_k=50)
         result_titles = [res[0, i]['title'] for i in range(res.shape[1])]
         
         rank = 0.0

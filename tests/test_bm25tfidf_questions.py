@@ -4,25 +4,25 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import pytest
 import numpy as np
-from utils import retriever
+from utils.retriever_hybrid import BM25TfidfRetriever
 from questions import QA
 
-IR = retriever.Retriever(".bm25s")
+IR = BM25TfidfRetriever(".bm25s")
 K = 100
 
 @pytest.mark.parametrize("query, target_titles", QA)
 
-def test_topK(query, target_titles):
+def test_topK_bm25tfidf(query, target_titles):
     res, scr = IR.run_query(query, k=K)
     result_titles = [res[0, i]['title'] for i in range(res.shape[1])]
     assert set(target_titles).intersection(result_titles), f"{target_titles} not in top K={K} results"
 
-def test_top_guess(query, target_titles):
+def test_top_guess_bm25tfidf(query, target_titles):
     res, scr = IR.run_query(query, k=K)
     result_titles = [res[0, i]['title'] for i in range(res.shape[1])]
     assert result_titles[0] in target_titles
 
-def test_MRR():
+def test_MRR_bm25tfidf():
     
     scores_mrr = []
     

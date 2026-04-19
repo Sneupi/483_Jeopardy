@@ -10,3 +10,5 @@ Pygments==2.20.0
 PyStemmer==3.0.0
 pytest==9.0.3
 tqdm==4.67.3
+sentence-transformers
+scikit-learn

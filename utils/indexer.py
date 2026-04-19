@@ -4,9 +4,13 @@
 import bm25s
 import Stemmer
 import os
+import shutil
 from parser import yield_docs
 
 def create_index(index_dir, dataset_dir):
+    # Remove old index if it exists
+    if os.path.exists(index_dir):
+        shutil.rmtree(index_dir)
     os.mkdir(index_dir)
     
     # load entire corpus to mem (OK for our ~1GB raw text corpus)
