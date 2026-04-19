@@ -26,7 +26,7 @@ def yield_docs(corpus_dir):
         print('Reading: ', path, end='\r')
         
         # iterate lines in file
-        with open(path) as file:
+        with open(path, encoding='utf-8') as file:
             for line in file:
                 
                 # collect to entries, yielding
