@@ -59,3 +59,19 @@ else
     echo Directory exists \"$index_dir\". Skipping index creation.
     echo -e '\033[0m'
 fi
+
+# Create TF-IDF index
+tfidf_index_dir=".tfidf"
+if [ ! -d "$tfidf_index_dir" ]; then
+
+    echo -e '\033[32m'
+    echo Creating TF-IDF index \"$tfidf_index_dir\" using \"$collection_dir\".
+    echo -e '\033[0m'
+
+    ./.venv/bin/python3 utils/tfidf_indexer.py $tfidf_index_dir $collection_dir
+
+else 
+    echo -e '\033[32m'
+    echo Directory exists \"$tfidf_index_dir\". Skipping TF-IDF index creation.
+    echo -e '\033[0m'
+fi

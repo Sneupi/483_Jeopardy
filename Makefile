@@ -15,6 +15,7 @@ install:
 
 clean: 
 	rm -rf .bm25s
+	rm -rf .tfidf
 	rm -rf .pytest_cache
 	rm -rf __pycache__
 	rm -rf tests/__pycache__

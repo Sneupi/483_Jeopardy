@@ -18,50 +18,37 @@ class BM25TfidfRetriever:
     - Effective: different relevance weighting helps
     """
     
-    def __init__(self, bm25_index_dir):
+    def __init__(self, bm25_index_dir, tfidf_index_dir=".tfidf"):
         """
         Initialize retriever with BM25 and TF-IDF.
         
         Args:
             bm25_index_dir: Path to BM25s index
+            tfidf_index_dir: Path to TF-IDF index
         """
+        import pickle
+        from scipy.sparse import load_npz
+        
         self.retriever = Retriever(bm25_index_dir)
         
-        # Check if TF-IDF is cached
-        import pickle
-        tfidf_cache = ".tfidf_cache.pkl"
-        
-        if os.path.exists(tfidf_cache):
-            print("Loading cached TF-IDF index...")
-            with open(tfidf_cache, 'rb') as f:
-                self.tfidf_vectorizer, self.tfidf_matrix = pickle.load(f)
-            print(f"Loaded TF-IDF matrix: {self.tfidf_matrix.shape}")
-        else:
-            # Build TF-IDF index (only first time)
-            print("Building TF-IDF index on 280k documents (this takes ~5 minutes on first run)...")
-            corpus_texts = []
-            for i, doc in enumerate(self.retriever.retriever.corpus):
-                if i % 50000 == 0:
-                    print(f"  Processing document {i}...")
-                text = f"{doc['title']} {doc['text']}"
-                corpus_texts.append(text)
-            
-            self.tfidf_vectorizer = TfidfVectorizer(
-                max_features=10000,
-                lowercase=True,
-                stop_words='english',
-                ngram_range=(1, 2),
-                max_df=0.8,
-                min_df=2
+        # Load pre-built TF-IDF index
+        if not os.path.exists(tfidf_index_dir):
+            raise FileNotFoundError(
+                f"TF-IDF index not found at {tfidf_index_dir}. "
+                f"Run: python utils/tfidf_indexer.py {tfidf_index_dir} .wiki"
             )
-            self.tfidf_matrix = self.tfidf_vectorizer.fit_transform(corpus_texts)
-            print(f"TF-IDF matrix built: {self.tfidf_matrix.shape}")
-            
-            # Cache for next time
-            print("Caching TF-IDF index for future runs...")
-            with open(tfidf_cache, 'wb') as f:
-                pickle.dump((self.tfidf_vectorizer, self.tfidf_matrix), f)
-            print("Cached!")
+        
+        print(f"Loading TF-IDF index from {tfidf_index_dir}...")
+        
+        vectorizer_path = os.path.join(tfidf_index_dir, "vectorizer.pkl")
+        matrix_path = os.path.join(tfidf_index_dir, "matrix.npz")
+        
+        with open(vectorizer_path, 'rb') as f:
+            self.tfidf_vectorizer = pickle.load(f)
+        
+        self.tfidf_matrix = load_npz(matrix_path)
+        
+        print(f"Loaded TF-IDF matrix: {self.tfidf_matrix.shape}")
     
     def run_query(self, query, k=100):
         """
@@ -131,9 +118,9 @@ class BM25TfidfRetriever:
         return results, scores
 
 
-def main(bm25_index_dir):
+def main(bm25_index_dir, tfidf_index_dir=".tfidf"):
     """Interactive query loop."""
-    ir = BM25TfidfRetriever(bm25_index_dir)
+    ir = BM25TfidfRetriever(bm25_index_dir, tfidf_index_dir)
     
     while True:
         query = input('\nQuery: ').strip()
@@ -152,8 +139,11 @@ def main(bm25_index_dir):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <bm25_index_dir>")
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <bm25_index_dir> [tfidf_index_dir]")
         exit(-1)
     
-    main(sys.argv[1])
+    bm25_dir = sys.argv[1]
+    tfidf_dir = sys.argv[2] if len(sys.argv) > 2 else ".tfidf"
+    
+    main(bm25_dir, tfidf_dir)

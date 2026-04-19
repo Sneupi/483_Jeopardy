@@ -7,7 +7,7 @@ import numpy as np
 from utils.retriever_hybrid import BM25TfidfRetriever
 from questions import QA
 
-IR = BM25TfidfRetriever(".bm25s")
+IR = BM25TfidfRetriever(".bm25s", ".tfidf")
 K = 100
 
 @pytest.mark.parametrize("query, target_titles", QA)
