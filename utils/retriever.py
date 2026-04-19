@@ -1,5 +1,9 @@
 import bm25s
 import os
+import spacy
+
+# Run 'python -m spacy download en_core_web_sm' in your terminal first
+nlp = spacy.load("en_core_web_sm", disable=["lemmatizer", "parser"])
 
 # TODO - Implement reranking for near-misses (in top K, but not #1), maybe via AI
 
@@ -16,13 +20,39 @@ class Retriever:
         self.tokenizer = bm25s.tokenization.Tokenizer(splitter=lambda x: x.split())
         self.tokenizer.load_vocab(index_dir)
         
+    def _refine_query(self, query):
+        '''
+        Returns Jeopardy query by keeping 
+        only descriptive content words
+        '''
+        
+        doc = nlp(query)
+        
+        # 1. Extract Named Entities (e.g., "Abraham Lincoln", "1865")
+        # Entities are crucial for Jeopardy clues
+        entities = [ent.text for ent in doc.ents]
+        
+        # 2. Filter tokens by Part-of-Speech
+        # We keep only descriptive content words
+        pos_filtered = [
+            token.text for token in doc 
+            if token.pos_ in {"NOUN", "PROPN", "ADJ"} and not token.is_stop
+        ]
+        
+        # 3. Combine and Deduplicate
+        # We give "Double Weight" to entities by adding them twice to the string
+        # to ensure BM25 prioritizes exact entity matches
+        refined_tokens = pos_filtered + entities
+        
+        return ' '.join(refined_tokens)
+        
     def run_query(self, query, k):
         '''
         Wrapper of bm25s BM25.retrieve(). 
         Performs tokenization on input query.
         '''
         
-        query_tokens = self.tokenizer.tokenize([query], update_vocab=False)
+        query_tokens = self.tokenizer.tokenize([self._refine_query(query)], update_vocab=False)
         output = results, scores = self.retriever.retrieve(query_tokens, k=k)
         return output
 
