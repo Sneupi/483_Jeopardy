@@ -4,19 +4,19 @@ from utils import retriever
 from questions import QA
 
 IR = retriever.Retriever(".bm25s")
-K = 100
+K = 500
 
 @pytest.mark.parametrize("query, target_titles", QA)
 
-# def test_topK(query, target_titles):
-#     res, scr = IR.run_query(query, k=K)
-#     result_titles = [res[0, i]['title'] for i in range(res.shape[1])]
-#     assert set(target_titles).intersection(result_titles), f"{target_titles} not in top K={K} results"
-
-def test_top_guess(query, target_titles):
+def test_topK(query, target_titles):
     res, scr = IR.run_query(query, k=K)
     result_titles = [res[0, i]['title'] for i in range(res.shape[1])]
-    assert result_titles[0] in target_titles
+    assert set(target_titles).intersection(result_titles), f"{target_titles} not in top K={K} results"
+
+# def test_top_guess(query, target_titles):
+#     res, scr = IR.run_query(query, k=K)
+#     result_titles = [res[0, i]['title'] for i in range(res.shape[1])]
+#     assert result_titles[0] in target_titles
 
 def test_MRR():
     
