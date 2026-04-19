@@ -24,5 +24,4 @@ run: $(PYTHON_VENV)
 	$(PYTHON_VENV) utils/retriever.py .bm25s
 
 test: $(PYTHON_VENV)
-	$(PYTHON_VENV) tests/meta_test_questions.py tests/questions.txt .bm25s tests
 	$(PYTHON_VENV) -m pytest

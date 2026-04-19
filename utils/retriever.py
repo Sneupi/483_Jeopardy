@@ -16,7 +16,7 @@ class Retriever:
         self.tokenizer = bm25s.tokenization.Tokenizer(splitter=lambda x: x.split())
         self.tokenizer.load_vocab(index_dir)
         
-    def run_query(self, query, k=100):
+    def run_query(self, query, k):
         '''
         Wrapper of bm25s BM25.retrieve(). 
         Performs tokenization on input query.
@@ -37,7 +37,7 @@ def main(index_dir):
         if query == 'exit':
             break
         
-        results, scores = ir.run_query(query)
+        results, scores = ir.run_query(query, 10)
         
         for i in range(results.shape[1]):
             doc, score = results[0, i], scores[0, i]
