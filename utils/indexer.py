@@ -4,16 +4,27 @@
 import bm25s
 import Stemmer
 import os
-from parser import yield_docs
+from parser import yield_docs_corpus
 
 def create_index(index_dir, dataset_dir):
     os.mkdir(index_dir)
     
     # load entire corpus to mem (OK for our ~1GB raw text corpus)
     corpus_records = [
-        {"id": i, "path": p, "title": t, "text": b} for i, (p, t, b) in enumerate(yield_docs(dataset_dir))
+        {
+            "id": i, 
+            "path": pth, 
+            "title": ttl, 
+            "categories": cat, 
+            "intro": itr, 
+            "body": bdy
+        } 
+        for i, (pth, ttl, cat, itr, bdy) 
+        in enumerate(yield_docs_corpus(dataset_dir))
     ]
-    corpus_lst = [r["title"] + " " + r["text"] for r in corpus_records]
+    
+    # Duplicate sections, boosting it's relative significance on the document
+    corpus_lst = [' '.join([r["title"]]*10+r["categories"]*5+[r["intro"]]*2+[r["body"]]) for r in corpus_records]
 
     # tokenization step
     stemmer = Stemmer.Stemmer("english")
