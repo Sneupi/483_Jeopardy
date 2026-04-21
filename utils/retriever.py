@@ -1,6 +1,7 @@
 import bm25s
 import os
 import spacy
+import Stemmer
 
 # Run 'python -m spacy download en_core_web_sm' in your terminal first
 nlp = spacy.load("en_core_web_sm", disable=["lemmatizer", "parser"])
@@ -17,15 +18,16 @@ class Retriever:
         assert os.path.exists(index_dir), f"Directory not found \"{index_dir}\""
         
         self.retriever = bm25s.BM25.load(index_dir, load_corpus=True)
-        self.tokenizer = bm25s.tokenization.Tokenizer(splitter=lambda x: x.split())
+        stemmer = Stemmer.Stemmer("english")
+        self.tokenizer = bm25s.tokenization.Tokenizer(stemmer=stemmer)
         self.tokenizer.load_vocab(index_dir)
         
-    def _refine_query(self, query):
+    def _refine_query(self, query: str):
         '''
         Returns Jeopardy query by keeping 
         only descriptive content words
         '''
-        
+        category, query = query.split(',', 1)
         doc = nlp(query)
         
         # 1. Extract Named Entities (e.g., "Abraham Lincoln", "1865")
@@ -42,7 +44,7 @@ class Retriever:
         # 3. Combine and Deduplicate
         # We give "Double Weight" to entities by adding them twice to the string
         # to ensure BM25 prioritizes exact entity matches
-        refined_tokens = pos_filtered + entities
+        refined_tokens = [category] + pos_filtered + entities
         
         return ' '.join(refined_tokens)
         
