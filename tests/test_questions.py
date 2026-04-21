@@ -4,7 +4,7 @@ from utils import retriever
 from questions import QA
 
 IR = retriever.Retriever(".bm25s")
-K = 500
+K = 100
 
 @pytest.mark.parametrize("query, target_titles", QA)
 
