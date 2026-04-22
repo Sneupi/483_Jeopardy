@@ -97,7 +97,6 @@ def yield_passages(corpus):
     '''
     
     # iterate files in dir
-    passage_id = 0
     for f in sorted(os.listdir(corpus)):                
         path = os.path.join(corpus, f)
         
@@ -107,8 +106,7 @@ def yield_passages(corpus):
         
         # iterate lines in file
         for title, passage in _yield_passages(path):
-            yield path, title, passage_id, passage
-            passage_id += 1
+            yield path, title, passage
             
     print()
 
@@ -145,10 +143,10 @@ if __name__ == "__main__":
         print()
     
     # print corpus
-    for path, title, passage_id, passage in yield_passages('assets/corpus-example'):
+    for i, (path, title, passage) in enumerate(yield_passages('assets/corpus-example')):
         print('Path:',path)
         print('Title:',title)
-        print('Passage ID:',passage_id)
+        print('Passage ID:',i)
         print('Passage:',passage)
         print('-'*80)
     
