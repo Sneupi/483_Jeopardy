@@ -1,10 +1,13 @@
 import spacy
 import os
 import re
+import sqlite3
+
 
 TITLE_PATTERN = re.compile(r'^\[\[([^:]*)\]\]$')
 CATEGORY_PATTERN = re.compile(r'^categories:\s+(.*)$', re.IGNORECASE)
 HEADER_PATTERN = re.compile(r'^\s*={2,5}(.*?)={2,5}\s*$')
+
 
 try:
     SPACY_NLP = spacy.load("en_core_web_sm")
@@ -13,27 +16,92 @@ except:
     exit(-1)
 
 
+def index_passages(db_name, passages):
+    '''Takes list of passage info (id, title, path) and indexes to SQL DB'''
+    
+    # Create tables
+    with sqlite3.connect(db_name) as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute('''CREATE TABLE IF NOT EXISTS passage (
+                            pid INT PRIMARY KEY, 
+                            title TEXT,
+                            path TEXT 
+                        )''')
+        
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_passage ON passage(pid)')
+    
+    # Index passages
+    print(f"Indexing passages to {db_name}...")
+    with sqlite3.connect(db_name) as conn:
+        cursor = conn.cursor()
+        cursor.executemany("INSERT INTO passage (pid, title, path) VALUES (?, ?, ?)", passages)
+    print("Done.")
+
+
+def fetch_row(db_name, pid):
+    '''Fetches (title, path) by passage id 
+    (i.e. Dense Passage Retrieval docID)'''
+    
+    with sqlite3.connect(db_name) as conn: 
+        cursor = conn.cursor()
+        cursor.execute("SELECT title, path FROM passage WHERE pid = ?", (pid,))
+        result = cursor.fetchone()
+        
+        if result:
+            return (result[0], result[1])
+        return None
+
+
 def refine_query(query: str):
     '''
     Tokenizes query, returning 
     only descriptive content words 
-    most-relevant for Jeopardy clues
+    most-relevant for Jeopardy clues.
+    Retains phrases in double quotes as single entities.
     '''
-    doc = SPACY_NLP(query)
+    # Extract quoted phrases
+    QUOTE = r'(\"[^\"]*\")'
+    tokens = [t for t in re.split(QUOTE, query) if t]
     
-    # Extract Named Entities
-    entities = [ent.text for ent in doc.ents]
+    final_output = []
+
+    for segment in tokens:
+        # If the segment is already a quote, keep it as is
+        if re.match(QUOTE, segment):
+            final_output.append(segment)
+            continue
+        
+        # 2. Process non-quoted segments with spaCy
+        doc = SPACY_NLP(segment)
+        i = 0
+        while i < len(doc):
+            token = doc[i]
+            
+            # Check if token is part of a Named Entity
+            if token.ent_iob_ != 'O':
+                
+                # Get the full span of the entity
+                ent = token.ent_type_
+                start = i
+                while i < len(doc) and doc[i].ent_type_ == ent:
+                    i += 1
+                entity_text = doc[start:i].text
+                
+                final_output.append(entity_text)
+                    
+            # If not an entity, apply Part-Of-Speech and Stopword filters
+            else:
+                if token.pos_ in {"NOUN", "PROPN", "ADJ"} and not token.is_stop:
+                    final_output.append(token.text)
+                i += 1
+
+    # 3. Combine back into a single string
+    result = " ".join(final_output)
+            
+    return result
     
-    # Filter tokens by Part-of-Speech
-    pos_filtered = [
-        token.text for token in doc 
-        if token.pos_ in {"NOUN", "PROPN", "ADJ"} and not token.is_stop
-    ]
     
-    # Combine and Deduplicate
-    refined_tokens = set(pos_filtered).union(entities)
-    
-    return refined_tokens
 
 
 def clean_body(body):
@@ -95,6 +163,11 @@ def yield_passages(corpus):
     contained in text files, 
     contained in corpus directory
     '''
+    # Chunking for Dense Passage Retrieval
+    def chunk_text(text: str, chunk_size=100):
+        words = text.split()
+        for i in range(0, len(words), chunk_size):
+            yield " ".join(words[i:i + chunk_size])
     
     # iterate files in dir
     for f in sorted(os.listdir(corpus)):                
@@ -106,7 +179,10 @@ def yield_passages(corpus):
         
         # iterate lines in file
         for title, passage in _yield_passages(path):
-            yield path, title, passage
+            
+            # return in manageable chunks
+            for chunk in chunk_text(passage):
+                yield path, title, chunk
             
     print()
 
@@ -131,7 +207,7 @@ def get_questions(path):
         
     return questions
       
-        
+
 if __name__ == "__main__":
     
     # print questions
@@ -142,12 +218,22 @@ if __name__ == "__main__":
         print('Answer:',a)
         print()
     
-    # print corpus
-    for i, (path, title, passage) in enumerate(yield_passages('assets/corpus-example')):
-        print('Path:',path)
-        print('Title:',title)
-        print('Passage ID:',i)
-        print('Passage:',passage)
-        print('-'*80)
+    passages = []
     
-    pass
+    # # print corpus
+    # for i, (path, title, passage) in enumerate(yield_passages('assets/corpus-example')):
+    #     print('Path:',path)
+    #     print('Title:',title)
+    #     print('Passage ID:',i)
+    #     print('Passage:',passage)
+    #     print('-'*80)
+    #     passages.append((i,title,path)) # for later DB indexing
+    
+    # # index & test retrieve
+    # EXAMPLE_DB = '.example.db'
+    # index_passages(EXAMPLE_DB, passages)
+    # print('330 -> ',fetch_row(EXAMPLE_DB, 330))
+    # print('331 -> ',fetch_row(EXAMPLE_DB, 331))
+    # print('333 -> ',fetch_row(EXAMPLE_DB, 333))
+    # print('334 -> ',fetch_row(EXAMPLE_DB, 334))
+    # os.remove(EXAMPLE_DB)
