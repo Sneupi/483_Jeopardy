@@ -10,6 +10,9 @@ if [ ! -d ".venv" ]; then
     python3 -m venv .venv
     source .venv/bin/activate
     pip install -r requirements.txt  
+
+    ./.venv/bin/python3 -m ipykernel install --user --name=.venv --display-name "Python (.venv)"
+
 else
     echo -e '\033[32m'
     echo 'Directory exists ".venv". Skipping venv creation.'
