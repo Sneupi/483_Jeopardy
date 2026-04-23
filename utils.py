@@ -32,11 +32,9 @@ def index_passages(db_name, passages):
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_passage ON passage(pid)')
     
     # Index passages
-    print(f"Indexing passages to {db_name}...")
     with sqlite3.connect(db_name) as conn:
         cursor = conn.cursor()
         cursor.executemany("INSERT INTO passage (pid, title, path) VALUES (?, ?, ?)", passages)
-    print("Done.")
 
 
 def fetch_row(db_name, pid):
@@ -157,16 +155,22 @@ def _yield_passages(path):
         yield title, cleaned([header] + passage)
 
 
-def yield_passages(corpus):
+def yield_passages(corpus, chunk_size=None, chunk_overlap=0.2):
     '''
     Yields passages of wiki entries,
     contained in text files, 
-    contained in corpus directory
+    contained in corpus directory.
+    
+    :param chunk_size int: If specified, subdivides passages, limiting chunk_size # of tokens per passage
+    :param chunk_overlap float: Specifies fractional overlap between passage chunks
+    
+    NOTE: chunk_size is approximate. Actual # tokens may 
+    differ passage-to-passage after your tokenization.
     '''
-    # Chunking for Dense Passage Retrieval
-    def chunk_text(text: str, chunk_size=100):
+    def chunk_text(text: str, chunk_size, overlap):
         words = text.split()
-        for i in range(0, len(words), chunk_size):
+        step = max(1, int(chunk_size * (1 - overlap)))
+        for i in range(0, len(words), step):
             yield " ".join(words[i:i + chunk_size])
     
     # iterate files in dir
@@ -180,10 +184,11 @@ def yield_passages(corpus):
         # iterate lines in file
         for title, passage in _yield_passages(path):
             
-            # return in manageable chunks
-            for chunk in chunk_text(passage):
-                yield path, title, chunk
-            
+            if chunk_size:
+                for chunk in chunk_text(passage, chunk_size, chunk_overlap):
+                    yield path, title, chunk
+            else:
+                yield path, title, passage    
     print()
 
 
@@ -220,20 +225,20 @@ if __name__ == "__main__":
     
     passages = []
     
-    # # print corpus
-    # for i, (path, title, passage) in enumerate(yield_passages('assets/corpus-example')):
-    #     print('Path:',path)
-    #     print('Title:',title)
-    #     print('Passage ID:',i)
-    #     print('Passage:',passage)
-    #     print('-'*80)
-    #     passages.append((i,title,path)) # for later DB indexing
+    # print corpus
+    for i, (path, title, passage) in enumerate(yield_passages('assets/corpus-example', chunk_size=300)):
+        print('Path:',path)
+        print('Title:',title)
+        print('Passage ID:',i)
+        print('Passage:',passage)
+        print('-'*80)
+        passages.append((i,title,path)) # for later DB indexing
     
-    # # index & test retrieve
-    # EXAMPLE_DB = '.example.db'
-    # index_passages(EXAMPLE_DB, passages)
-    # print('330 -> ',fetch_row(EXAMPLE_DB, 330))
-    # print('331 -> ',fetch_row(EXAMPLE_DB, 331))
-    # print('333 -> ',fetch_row(EXAMPLE_DB, 333))
-    # print('334 -> ',fetch_row(EXAMPLE_DB, 334))
-    # os.remove(EXAMPLE_DB)
+    # index & test retrieve
+    EXAMPLE_DB = '.example.db'
+    index_passages(EXAMPLE_DB, passages)
+    print('330 -> ',fetch_row(EXAMPLE_DB, 330))
+    print('331 -> ',fetch_row(EXAMPLE_DB, 331))
+    print('333 -> ',fetch_row(EXAMPLE_DB, 333))
+    print('334 -> ',fetch_row(EXAMPLE_DB, 334))
+    os.remove(EXAMPLE_DB)
