@@ -18,8 +18,16 @@ This file will setup a Python virtual environment, the document collection of wi
 
 # Run
 
-Once you are successfully installed, enter the Python virtual environment and run the project as a notebook 
+Enter the Python virtual environment and run the project as a notebook 
 ```bash
 source ./.venv/bin/activate
 jupyter notebook
+```
+
+# Test
+
+To run retrieval performance testing, use pytest framework in venv
+```bash
+source ./.venv/bin/activate
+pytest
 ```
