@@ -60,8 +60,10 @@ class JeopardyBM25(Jeopardy):
         corpus_tokens = tokenizer.tokenize(wiki_content, return_as="tuple")
 
         # indexing & bm25 calc
+        # (these k1 and b perform best for the provided corpus, 
+        # favoring short queries & reducing wiki length penalty) 
         saved_corpus = [{'titles': [title] + wiki_redirects[title]} for title in wiki_titles]
-        retriever = bm25s.BM25(corpus=saved_corpus, backend="numba")
+        retriever = bm25s.BM25(corpus=saved_corpus, backend="numba", k1=1.1, b=0.4, method='lucene')
         retriever.index(corpus_tokens)
         
         # save for reuse
