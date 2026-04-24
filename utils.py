@@ -1,8 +1,6 @@
 import spacy
 import os
 import re
-import sqlite3
-
 
 TITLE_PATTERN = re.compile(r'^\[\[([^:]*)\]\]$')
 CATEGORY_PATTERN = re.compile(r'^categories:\s+(.*)$', re.IGNORECASE)
@@ -16,51 +14,15 @@ except:
     exit(-1)
 
 
-def index_passages(db_name, passages):
-    '''Takes list of passage info (id, title, path) and indexes to SQL DB'''
-    
-    # Create tables
-    with sqlite3.connect(db_name) as conn:
-        cursor = conn.cursor()
-        
-        cursor.execute('''CREATE TABLE IF NOT EXISTS passage (
-                            pid INT PRIMARY KEY, 
-                            title TEXT,
-                            path TEXT 
-                        )''')
-        
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_passage ON passage(pid)')
-    
-    # Index passages
-    with sqlite3.connect(db_name) as conn:
-        cursor = conn.cursor()
-        cursor.executemany("INSERT INTO passage (pid, title, path) VALUES (?, ?, ?)", passages)
 
-
-def fetch_row(db_name, pid):
-    '''Fetches (title, path) by passage id 
-    (i.e. Dense Passage Retrieval docID)'''
-    
-    with sqlite3.connect(db_name) as conn: 
-        cursor = conn.cursor()
-        cursor.execute("SELECT title, path FROM passage WHERE pid = ?", (pid,))
-        result = cursor.fetchone()
-        
-        if result:
-            return (result[0], result[1])
-        return None
-
-
-def refine_query(query: str):
+def refine_clue(clue: str):
     '''
-    Tokenizes query, returning 
-    only descriptive content words 
-    most-relevant for Jeopardy clues.
-    Retains phrases in double quotes as single entities.
+    Returns distilled string, containing
+    most-significant tokens to Jeopardy clues
     '''
     # Extract quoted phrases
     QUOTE = r'(\"[^\"]*\")'
-    tokens = [t for t in re.split(QUOTE, query) if t]
+    tokens = [t for t in re.split(QUOTE, clue) if t]
     
     final_output = []
 
@@ -101,144 +63,165 @@ def refine_query(query: str):
     
     
 
-
-def clean_body(body):
+def clean_mediawiki(content):
     '''Simple cleaning of MediaWiki syntax'''
     tpl_element = r'\[tpl\].*?\[\/tpl\]'
     links = r'\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|]'
     header_md = r'={2,5}'
     table_md = r'^\s*\|[^\n]*$'
     
-    body = re.sub(r'(' + tpl_element + r'|' + links + r'|' + header_md + r'|' + table_md + r')', '', body, flags=re.DOTALL|re.IGNORECASE|re.MULTILINE)
-    return body
+    content = re.sub(r'(' + tpl_element + r'|' + links + r'|' + header_md + r'|' + table_md + r')', '', content, flags=re.DOTALL|re.IGNORECASE|re.MULTILINE)
+    return content
 
-
-def _yield_passages(path):
-    '''
-    Yields passages of wiki entries,
-    contained in text file
-    '''
+        
+            
+def yield_wiki_path(path):
+    '''Yields wiki entries (title, content) contained in file'''
     
     title = None
-    passage = []
-    header = ''
-    
-    is_empty = lambda p: all(s.isspace() for s in p)
-    is_redirect = lambda p: '#redirect' in ''.join(p).lower()
-    cleaned = lambda p: clean_body(''.join(p))
+    content = []
     
     with open(path) as file:
         for line in file:
             
-            # collect to entries, yielding
             match_title = TITLE_PATTERN.match(line)
-            match_header = HEADER_PATTERN.match(line)
             
             if match_title:
-                if not is_empty(passage) and not is_redirect(passage):
-                    yield title, cleaned([header] + passage)
-                title = match_title.group(1)
-                header = ''
-                passage = []
                 
-            elif match_header:
-                if not is_empty(passage) and not is_redirect(passage):
-                    yield title, cleaned([header] + passage)
-                header = match_header.group(1)
-                passage = []
+                content = ''.join(content)
+                if title:
+                    yield title, content
+                    
+                title = match_title.group(1)
+                content = []
                 
             else:
-                passage.append(line)
+                content.append(line)
             
     # EOF, yield last entry
-    if not is_empty(passage) and not is_redirect(passage):
-        yield title, cleaned([header] + passage)
+    content = ''.join(content)
+    if title:
+        yield title, content
 
 
-def yield_passages(corpus, chunk_size=None, chunk_overlap=0.2):
+
+def yield_wiki_corpus(corpus):
     '''
-    Yields passages of wiki entries,
+    Yields wiki entries 
+    (title, content)
     contained in text files, 
     contained in corpus directory.
-    
-    :param chunk_size int: If specified, subdivides passages, limiting chunk_size # of tokens per passage
-    :param chunk_overlap float: Specifies fractional overlap between passage chunks
-    
-    NOTE: chunk_size is approximate. Actual # tokens may 
-    differ passage-to-passage after your tokenization.
     '''
-    def chunk_text(text: str, chunk_size, overlap):
-        words = text.split()
-        step = max(1, int(chunk_size * (1 - overlap)))
-        for i in range(0, len(words), step):
-            yield " ".join(words[i:i + chunk_size])
-    
-    # iterate files in dir
-    for f in sorted(os.listdir(corpus)):                
+    for f in sorted(os.listdir(corpus)):   
+                     
         path = os.path.join(corpus, f)
-        
-        # skip all subdirs
         if os.path.isdir(path): continue
         print('Reading: ', path, end='\r')
         
-        # iterate lines in file
-        for title, passage in _yield_passages(path):
-            
-            if chunk_size:
-                for chunk in chunk_text(passage, chunk_size, chunk_overlap):
-                    yield path, title, chunk
-            else:
-                yield path, title, passage    
+        for title, content in yield_wiki_path(path):
+            yield title, content
+                     
     print()
 
 
-def get_questions(path):
-    '''Get list of (category, clue, answer)'''
+
+def yield_questions(path):
+    '''Yield sequence of category, clue, answer'''    
     
-    questions = []
-    
-    with open(path) as q_file:
+    with open(path) as file:
         
         cqa_list = [
             cqa.strip() 
-            for cqa in q_file.read().split('\n\n') 
+            for cqa in file.read().split('\n\n') 
             if cqa.strip()
         ]
         
         for cqa in cqa_list:
-            category, question, answer = cqa.split('\n')
+            category, clue, answer = cqa.split('\n')
             answer = answer.split('|') # delimit by '|'
-            questions.append((category, question, answer))
-        
-    return questions
+            yield category, clue, answer
       
+
+
+def chunk_text(title, content, window_size=100, overlap=20):
+    """Splits text into overlapping chunks prefixed with the title."""
+    words = content.split()
+    if not words:
+        return []
+    
+    chunks = []
+    for i in range(0, len(words), window_size - overlap):
+        chunk = words[i : i + window_size]
+        # Adding the title to each chunk improves DPR retrieval significantly
+        full_text = f"{title}: {' '.join(chunk)}"
+        chunks.append(full_text)
+        if i + window_size >= len(words):
+            break
+    return chunks
+
+
 
 if __name__ == "__main__":
     
     # print questions
-    for c,q,a in get_questions('assets/questions.txt'):
-        print('Category:',c)
-        print('Clue:',q)
-        print('Clue (Refined):',refine_query(q))
-        print('Answer:',a)
+    for category, clue, answers in yield_questions('assets/questions.txt'):
+        print('Category:', category)
+        print('Clue:', clue)
+        print('Clue (Refined):', refine_clue(clue))
+        print('Answer:', answers)
         print()
     
-    passages = []
+    wiki_titles = []
+    wiki_redirects = {} # Don't save redirects; instead alias to existing pages
+    wiki_content = []
     
     # print corpus
-    for i, (path, title, passage) in enumerate(yield_passages('assets/corpus-example', chunk_size=300)):
-        print('Path:',path)
-        print('Title:',title)
-        print('Passage ID:',i)
-        print('Passage:',passage)
-        print('-'*80)
-        passages.append((i,title,path)) # for later DB indexing
+    i = 0
+    for title, content in yield_wiki_corpus('assets/corpus-example'):
+        
+        # clean content
+        content = clean_mediawiki(content)
+        
+        # if alias, track but dont actually index
+        found = re.search(r'^\s*#redirect\s+(.*?)$', content, re.IGNORECASE|re.MULTILINE)
+        if found:
+            alias = found.group(1)
+            if not wiki_redirects.get(title):
+                wiki_redirects[title] = []
+            wiki_redirects[title].append(alias)
+            continue
+        
+        # subdivide into chunks
+        for chunk in chunk_text(title, content):
+            wiki_titles.append(title)
+            wiki_content.append(content)
+            
+            line = '-'*50
+            print(f'{i} --- (Chunked & Cleaned) {line}\n{chunk}\n')
+            i += 1
+    
+    # print aliases
+    print("List of Aliases:")
+    for k, v in wiki_redirects.items():
+        print('\t',k,'->',v)
     
     # index & test retrieve
-    EXAMPLE_DB = '.example.db'
-    index_passages(EXAMPLE_DB, passages)
-    print('330 -> ',fetch_row(EXAMPLE_DB, 330))
-    print('331 -> ',fetch_row(EXAMPLE_DB, 331))
-    print('333 -> ',fetch_row(EXAMPLE_DB, 333))
-    print('334 -> ',fetch_row(EXAMPLE_DB, 334))
-    os.remove(EXAMPLE_DB)
+    import pickle
+    
+    EXAMPLE_PKL = '.example.pkl'
+    
+    if os.path.exists(EXAMPLE_PKL): 
+        os.remove(EXAMPLE_PKL)
+        
+    with open(EXAMPLE_PKL, 'wb') as f: 
+        pickle.dump(wiki_titles, f)
+    
+    with open(EXAMPLE_PKL, 'rb') as f:
+        temp = pickle.load(f)
+        print('LOAD TOP ->',temp[0])
+        print('LOAD END ->',temp[len(temp)-1])
+    
+    os.remove(EXAMPLE_PKL)
+    
+    print('".wiki" size (pages, include redirects):',len([_ for _ in yield_wiki_corpus('.wiki')]))
+    
