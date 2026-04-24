@@ -194,7 +194,7 @@ if __name__ == "__main__":
         # subdivide into chunks
         for chunk in chunk_text(title, content):
             wiki_titles.append(title)
-            wiki_content.append(content)
+            wiki_content.append(chunk)
             
             line = '-'*50
             print(f'{i} --- (Chunked & Cleaned) {line}\n{chunk}\n')
