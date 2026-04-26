@@ -25,3 +25,6 @@ make run   # Type queries by hand
 ```bash
 make test  # Run pytests
 ```
+```bash
+make eval  # Evaluation metrics
+```

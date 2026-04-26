@@ -23,3 +23,6 @@ run: $(PYTHON_VENV)
 
 test: $(PYTHON_VENV)
 	$(PYTHON_VENV) -m pytest
+
+eval: $(PYTHON_VENV)
+	$(PYTHON_VENV) eval.py

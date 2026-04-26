@@ -1,4 +1,5 @@
 from retrievers import JeopardyBM25
+import utils
 
 def construct_query(category, clue):
     return f"{category}: {clue}"
@@ -30,3 +31,13 @@ def eval_mrr(ir: JeopardyBM25, questions: list[tuple[str, str, list[str]]], k: i
         if r: mrr += 1.0 / r
     mrr /= float(len(questions))
     print(f"MRR@{k} ({type(ir).__name__}): {mrr:.4}")
+
+
+if __name__ == "__main__":
+    
+    IR = JeopardyBM25('.index.bm25s')
+    K = 100
+    QUESTIONS = [_ for _ in utils.yield_questions('assets/questions.txt')]
+    
+    eval_mrr(IR, QUESTIONS, K)
+    eval_p_at_1(IR, QUESTIONS, K)
