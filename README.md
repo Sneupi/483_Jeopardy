@@ -18,16 +18,20 @@ This file will setup a Python virtual environment, the document collection of wi
 
 # Run
 
-Enter the Python virtual environment and run the project as a notebook 
+To run project commands, first enter the Python virtual environment
 ```bash
 source ./.venv/bin/activate
-jupyter notebook
 ```
-
+From here you may run the BM25 implementation, or the Jupyter Notebook for the Dense Passage Retrieval implementation
+```bash
+python3 retrievers.py # BM25 hand-type user queries
+```
+```bash
+jupyter notebook      # DPR notebook (build & eval, ~1hr to build yourself)
+```
 # Test
 
-To run retrieval performance testing, use pytest framework in venv
+To run BM25 performance testing
 ```bash
-source ./.venv/bin/activate
 pytest
 ```

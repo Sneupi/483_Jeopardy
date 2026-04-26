@@ -4,14 +4,14 @@ import Stemmer
 import bm25s
 import utils
 import re
+import torch
+from transformers import AutoTokenizer, AutoModel
+import faiss
+import pickle
 import collections
 
+
 class Jeopardy(ABC):
-    @abstractmethod
-    def __init__(self, index_path):
-        '''Constructor, given path to index'''
-        pass
-    
     @abstractmethod
     def search(self, query: str, k: int):
         '''Returns top K answers based on query'''
@@ -83,25 +83,37 @@ class JeopardyBM25(Jeopardy):
 
 
 class JeopardyDPR(Jeopardy):
-    def __init__(self, index_path):
-        pass
+    def __init__(self, index_path, titles_path, tokenizer, model):
+        
+        self.tokenizer = tokenizer
+        self.model = model.to('cpu')
+        self.model.eval()
+        
+        self.index = faiss.read_index(index_path)
+        
+        with open(titles_path, 'rb') as f:
+            self.titles = pickle.load(f) 
+        
     def search(self, query, k):
-        return ['TODO: implement']
+        
+        inputs = self.tokenizer(query, return_tensors="pt").to('cpu')
+        with torch.no_grad():
+            embedding = self.model(**inputs).pooler_output.numpy()
+        
+        distances, indices = self.index.search(embedding, k)
+        
+        return [self.titles[int(i)] for i in indices[0]]
 
 
 if __name__ == "__main__":
     
-    BM25S_INDEX = '.index.bm25s'
-    CORPUS = '.wiki'
+    BM25 = JeopardyBM25('.index.bm25s')
     
-    if not os.path.exists(BM25S_INDEX):
-        JeopardyBM25.create_index(BM25S_INDEX, CORPUS)
-    
-    ir = JeopardyBM25(BM25S_INDEX)
     while True:    
         query = input('Query: ').strip()
         if query == 'exit':
             break
         
-        titles = ir.search(query, 10)
-        print(titles)
+        titles_bm25 = BM25.search(query, 10)
+        
+        print('\n'.join([f'{i:>2}:{t}' for i, t in enumerate(titles_bm25)]))
