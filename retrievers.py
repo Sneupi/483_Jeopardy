@@ -51,8 +51,8 @@ class JeopardyBM25(Jeopardy):
             # if alias, track but dont actually index
             found = re.search(r'^\s*#redirect\s+(.*?)$', content, re.IGNORECASE|re.MULTILINE)
             if found:
-                alias = found.group(1)
-                wiki_redirects[title].append(alias)
+                real_page = found.group(1).strip()
+                wiki_redirects[real_page].append(title)
                 continue
             
             # keep hold of title->content mapping
@@ -83,22 +83,22 @@ class JeopardyBM25(Jeopardy):
 
 
 class JeopardyDPR(Jeopardy):
-    def __init__(self, index_path, titles_path, tokenizer, model):
+    def __init__(self, index_path, titles_path, redirects_path, tokenizer, model):
         
         self.tokenizer = tokenizer
-        self.model = model.to('cpu')
+        self.model = model.to('cuda')
         self.model.eval()
         
         self.index = faiss.read_index(index_path)
         
-        with open(titles_path, 'rb') as f:
-            self.titles = pickle.load(f) 
+        self.titles = utils.load_pickle(titles_path)
+        self.redirects = utils.load_pickle(redirects_path)
         
     def search(self, query, k):
         
-        inputs = self.tokenizer(query, return_tensors="pt").to('cpu')
+        inputs = self.tokenizer(query, return_tensors="pt").to('cuda')
         with torch.no_grad():
-            embedding = self.model(**inputs).pooler_output.numpy()
+            embedding = self.model(**inputs).pooler_output.cpu().numpy()
         
         distances, indices = self.index.search(embedding, k)
         
@@ -107,13 +107,18 @@ class JeopardyDPR(Jeopardy):
 
 if __name__ == "__main__":
     
-    BM25 = JeopardyBM25('.index.bm25s')
+    model_name = 'sentence-transformers/all-MiniLM-L6-v2'
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModel.from_pretrained(model_name)
+    model.eval()
+    
+    ir = JeopardyDPR('.index.faiss', '.titles.pkl', tokenizer, model)
     
     while True:    
         query = input('Query: ').strip()
         if query == 'exit':
             break
         
-        titles_bm25 = BM25.search(query, 10)
+        titles = ir.search(query, 10)
         
-        print('\n'.join([f'{i:>2}:{t}' for i, t in enumerate(titles_bm25)]))
+        print('\n\n'.join([f'{i:>2}:{t}' for i, t in enumerate(titles)]))

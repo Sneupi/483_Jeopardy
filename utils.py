@@ -1,6 +1,7 @@
 import spacy
 import os
 import re
+import pickle
 
 TITLE_PATTERN = re.compile(r'^\[\[([^:]*)\]\]$')
 CATEGORY_PATTERN = re.compile(r'^categories:\s+(.*)$', re.IGNORECASE)
@@ -13,6 +14,17 @@ except:
     print('Not found "en_core_web_sm". Run in terminal "python3 -m spacy download en_core_web_sm".')
     exit(-1)
 
+
+def save_pickle(obj, path):
+    if os.path.exists(path): os.remove(path)
+    with open(path, 'wb') as f: 
+        pickle.dump(obj, f)
+        
+        
+def load_pickle(path):
+    with open(path, 'rb') as f:
+        obj = pickle.load(f) 
+    return obj
 
 
 def refine_clue(clue: str):
