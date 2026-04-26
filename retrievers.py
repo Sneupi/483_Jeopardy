@@ -8,6 +8,11 @@ import collections
 
 class Jeopardy(ABC):
     @abstractmethod
+    def __init__(self, index_path):
+        '''Constructor, given path to index'''
+        pass
+    
+    @abstractmethod
     def search(self, query: str, k: int):
         '''Returns top K answers based on query'''
         pass
@@ -75,6 +80,13 @@ class JeopardyBM25(Jeopardy):
         # get memory usage (expected usage ~5GB)
         mem_use = bm25s.utils.benchmark.get_max_memory_usage()
         print(f"Peak memory usage: {mem_use:.2f} GB")
+
+
+class JeopardyDPR(Jeopardy):
+    def __init__(self, index_path):
+        pass
+    def search(self, query, k):
+        return ['TODO: implement']
 
 
 if __name__ == "__main__":
