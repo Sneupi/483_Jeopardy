@@ -46,3 +46,21 @@ else
     echo Directory exists \"$collection_dir\". Skipping unzip \"$tar_file\".
     echo -e '\033[0m'
 fi
+
+# Create BM25 Index
+bm25s_index=".index.bm25s"
+if [ ! -d $bm25s_index ]; then
+    
+    echo -e '\033[32m'
+    echo Create BM25S index \"$bm25s_index\" from corpus \"$collection_dir\".
+    echo -e '\033[0m'
+
+    ./.venv/bin/python3 -c "import retrievers; retrievers.JeopardyBM25.create_index(\"$bm25s_index\", \"$collection_dir\")"
+
+else
+    echo -e '\033[32m'
+    echo BM25S index \"$bm25s_index\" already exists. Skip creation.
+    echo -e '\033[0m'
+fi
+
+
