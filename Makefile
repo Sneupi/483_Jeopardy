@@ -1,4 +1,4 @@
-.PHONY: all install clean run test
+.PHONY: all install clean run test eval
 
 SHELL := /bin/bash
 PYTHON_VENV := .venv/bin/python
