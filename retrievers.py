@@ -32,11 +32,12 @@ class JeopardyBM25:
         os.mkdir(index_dir)
         
         wiki_titles = []
+        wiki_paths = []
         wiki_redirects =  collections.defaultdict(lambda: []) # Ignore redirects, but store as aliases
         wiki_content = []
 
         # load entire corpus to mem (OK for our ~1GB text corpus)
-        for title, content in utils.yield_wiki_corpus(corpus_dir):
+        for path, title, content in utils.yield_wiki_corpus(corpus_dir):
             
             # clean raw content
             content = utils.clean_mediawiki(content)
@@ -50,6 +51,7 @@ class JeopardyBM25:
             
             # keep hold of title->content mapping
             wiki_titles.append(title)
+            wiki_paths.append(path)
             wiki_content.append(content)
 
         # tokenization step
@@ -60,7 +62,12 @@ class JeopardyBM25:
         # indexing & bm25 calc
         # (these k1 and b perform best for the provided corpus, 
         # favoring short queries & reducing wiki length penalty) 
-        saved_corpus = [{'title': [title] + wiki_redirects[title]} for title in wiki_titles]
+        saved_corpus = [
+            {
+                'path': wiki_paths[i],
+                'title': [title] + wiki_redirects[title]
+            } 
+            for i, title in enumerate(wiki_titles)]
         retriever = bm25s.BM25(corpus=saved_corpus, backend="numba", k1=1.1, b=0.4, method='lucene')
         retriever.index(corpus_tokens)
         

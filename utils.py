@@ -120,7 +120,7 @@ def yield_wiki_path(path):
 def yield_wiki_corpus(corpus):
     '''
     Yields wiki entries 
-    (title, content)
+    (path, title, content)
     contained in text files, 
     contained in corpus directory.
     '''
@@ -131,7 +131,7 @@ def yield_wiki_corpus(corpus):
         print('Reading: ', path, end='\r')
         
         for title, content in yield_wiki_path(path):
-            yield title, content
+            yield path, title, content
                      
     print()
 
