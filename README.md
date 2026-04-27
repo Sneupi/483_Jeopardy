@@ -5,6 +5,12 @@ the classification of Wikipedia pages; AKA which page is the most likely answer 
 
 This project was designed utilizing 100 questions from previous Jeopardy games, whose answers appear as Wikipedia pages, and a collection of approximately 280,000 Wikipedia pages, which include the correct answers for the above 100 questions. These questions were extracted from j-archive.com, from shows that took place between 2013-01-01 and 2013-01-07.
 
+# Quick Start
+For the absolute simplest way to install, index and test in one step (~4 minutes)
+```bash
+make all
+```
+
 # Install
 
 For replicability and simplicity on Linux systems (or WSL) run

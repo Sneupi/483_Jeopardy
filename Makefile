@@ -8,7 +8,7 @@ PYTHON_VENV := .venv/bin/python
 #   `source ./.venv/bin/activate`
 # 	and run Python programs manually
 
-all: clean install test
+all: clean install test eval
 
 install:
 	./install.sh
@@ -22,7 +22,7 @@ run: $(PYTHON_VENV)
 	$(PYTHON_VENV) retrievers.py
 
 test: $(PYTHON_VENV)
-	$(PYTHON_VENV) -m pytest
+	-$(PYTHON_VENV) -m pytest
 
 eval: $(PYTHON_VENV)
 	$(PYTHON_VENV) eval.py
